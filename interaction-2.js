@@ -12,7 +12,7 @@ let dspNodeParams = null;
 let jsonParams = null;
 
 // Change here to ("tuono") depending on your wasm file name
-const dspName = "bells";
+const dspName = "brass";
 const instance = new FaustWasm2ScriptProcessor(dspName);
 
 // output to window or npm package module
@@ -25,7 +25,7 @@ if (typeof module === "undefined") {
 }
 
 // The name should be the same as the WASM file, so change tuono with brass if you use brass.wasm
-bells.createDSP(audioContext, 1024)
+brass.createDSP(audioContext, 1024)
     .then(node => {
         dspNode = node;
         dspNode.connect(audioContext.destination);
@@ -37,6 +37,7 @@ bells.createDSP(audioContext, 1024)
         // // ALWAYS PAY ATTENTION TO MIN AND MAX, ELSE YOU MAY GET REALLY HIGH VOLUMES FROM YOUR SPEAKERS
         // const [exampleMinValue, exampleMaxValue] = getParamMinMax(exampleMinMaxParam);
         // console.log('Min value:', exampleMinValue, 'Max value:', exampleMaxValue);
+        dspNode.setParamValue("/brass/blower/breathGain", 0.1);
     });
 
 
@@ -55,12 +56,27 @@ function accelerationChange(accx, accy, accz) {
     // playAudio()
 }
 
+let initialTilt = null;
+let smoothPressure = 0;
+
 function rotationChange(rotx, roty, rotz) {
+    if (!dspNode || audioContext.state !== "running") {
+        return;
+    }
+
+    // Limit tilt to -30 to +30 degrees
+    const tilt = Math.max(-30, Math.min(30, roty));
+
+    // Map tilt to air pressure between 0.2 and 0.6
+    const pressure = 0.2 + ((tilt + 30) / 60) * 0.4;
+
+    // Control the brass instrument
+    dspNode.setParamValue("/brass/blower/pressure", pressure);
 }
 
+
 function mousePressed() {
-    // playAudio()
-    // Use this for debugging from the desktop!
+    // DSP is controlled by the button.
 }
 
 function deviceMoved() {
@@ -74,7 +90,6 @@ function deviceTurned() {
 function deviceShaken() {
     shaketimer = millis();
     statusLabels[0].style("color", "pink");
-    playAudio();
 }
 
 function getMinMaxParam(address) {
@@ -96,14 +111,7 @@ function getMinMaxParam(address) {
 //==========================================================================================
 
 function playAudio() {
-    if (!dspNode) {
-        return;
-    }
-    if (audioContext.state === 'suspended') {
-        return;
-    }
-    dspNode.setParamValue("/englishBell/gate", 1)
-    setTimeout(() => { dspNode.setParamValue("/englishBell/gate", 0) }, 100);
+    // not used
 }
 
 //==========================================================================================
